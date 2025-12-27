@@ -177,6 +177,14 @@ public class BasePuralax implements PuralaxModel<Tile> {
     }
 
     /**
+     * Returns the currently set goal color code for the active game.
+     * May be null if no goal has been set.
+     */
+    public String getGoalColor() {
+        return this.goalColor;
+    }
+
+    /**
      * Determines if the game has been started
      * @return true if the game is started, false otherwise
      */
@@ -195,5 +203,11 @@ public class BasePuralax implements PuralaxModel<Tile> {
         } else if (numCols < 1) {
             throw new IllegalArgumentException("Invalid parameters. Must be at least one column.");
         }
+    }
+    /**
+     * Resets the game state so isGameStarted() returns false and no game is active.
+     */
+    public void resetGameState() {
+        this.gameStarted = false;
     }
 }

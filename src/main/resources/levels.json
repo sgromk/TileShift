@@ -13,9 +13,9 @@
     "rows": 3,
     "cols": 3,
     "tiles": [
-      [ { "color": "B", "dots": 1 }, { "color": "G", "dots": 0 }, { "type": "empty" } ],
-      [ { "color": "G", "dots": 0 }, { "type": "wall" }, { "color": "B", "dots": 0 } ],
-      [ { "color": "B", "dots": 0 }, { "color": "G", "dots": 0 }, { "color": "B", "dots": 0 } ]
+      [ { "color": "G", "dots": 2 }, { "type": "empty" }, { "color": "P", "dots": 2 } ],
+      [ { "type": "empty" }, { "type": "wall" }, { "type": "empty" } ],
+      [ { "color": "B", "dots": 2 }, { "type": "empty" }, { "color": "Y", "dots": 0 } ]
     ]
   },
   {
@@ -23,9 +23,65 @@
     "rows": 3,
     "cols": 3,
     "tiles": [
-      [ { "color": "Y", "dots": 1 }, { "color": "G", "dots": 0 }, { "type": "empty" } ],
-      [ { "color": "G", "dots": 0 }, { "type": "wall" }, { "color": "Y", "dots": 0 } ],
-      [ { "color": "Y", "dots": 0 }, { "color": "G", "dots": 0 }, { "color": "Y", "dots": 0 } ]
+      [ { "color": "G", "dots": 0 }, { "type": "empty" }, { "color": "B", "dots": 0 } ],
+      [ { "color": "Y", "dots": 3 }, { "color": "P", "dots": 2 }, { "type": "empty" } ],
+      [ { "color": "B", "dots": 0 }, { "type": "empty" }, { "type": "empty" } ]
+    ]
+  },
+  {
+    "goalColor": "G",
+    "rows": 4,
+    "cols": 4,
+    "tiles": [
+      [ { "color": "P", "dots": 1 }, { "color": "B", "dots": 1 }, { "color": "Y", "dots": 1 }, { "color": "B", "dots": 1 } ],
+      [ { "type": "wall" }, { "type": "wall" }, { "type": "wall" }, { "color": "R", "dots": 0 } ],
+      [ { "color": "P", "dots": 1 }, { "color": "B", "dots": 1 }, { "color": "Y", "dots": 1 }, { "color": "B", "dots": 0 } ],
+      [ { "type": "empty" }, { "type": "empty" }, { "type": "empty" }, { "color": "G", "dots": 1 } ]
+    ]
+  },
+  {
+    "goalColor": "G",
+    "rows": 2,
+    "cols": 2,
+    "tiles": [
+      [ { "color": "G", "dots": 1 }, { "type": "wall" } ],
+      [ { "color": "B", "dots": 0 }, { "type": "empty" } ]
+    ]
+  },
+  {
+    "goalColor": "G",
+    "rows": 2,
+    "cols": 2,
+    "tiles": [
+      [ { "color": "G", "dots": 1 }, { "type": "wall" } ],
+      [ { "color": "B", "dots": 0 }, { "type": "empty" } ]
+    ]
+  },
+  {
+    "goalColor": "G",
+    "rows": 2,
+    "cols": 2,
+    "tiles": [
+      [ { "color": "G", "dots": 1 }, { "type": "wall" } ],
+      [ { "color": "B", "dots": 0 }, { "type": "empty" } ]
+    ]
+  },
+  {
+    "goalColor": "G",
+    "rows": 2,
+    "cols": 2,
+    "tiles": [
+      [ { "color": "G", "dots": 1 }, { "type": "wall" } ],
+      [ { "color": "B", "dots": 0 }, { "type": "empty" } ]
+    ]
+  },
+  {
+    "goalColor": "G",
+    "rows": 2,
+    "cols": 2,
+    "tiles": [
+      [ { "color": "G", "dots": 1 }, { "type": "wall" } ],
+      [ { "color": "B", "dots": 0 }, { "type": "empty" } ]
     ]
   }
 ]

@@ -162,7 +162,33 @@ public class PuralaxGraphicalView extends JFrame {
 
     private void renderPlayableLevel() {
         boardPanel.removeAll();
-        populateTileGrid(model.getNumRows(), model.getNumCols(), boardPanel, model.getBoard()); // Display the entire screen as a level
+        boardPanel.setLayout(new BorderLayout());
+        boardPanel.setBackground(PuralaxConstants.COLOR_CREAM);
+
+        // Top: show the current target color
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 6));
+        topPanel.setOpaque(false);
+        JLabel targetLabel = new JLabel("Target ");
+        targetLabel.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(18f));
+        topPanel.add(targetLabel);
+
+        JPanel targetTile = new JPanel();
+        targetTile.setPreferredSize(new Dimension(36, 36));
+        targetTile.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+        String goal = model.getGoalColor();
+        if (goal == null || goal.isEmpty()) { goal = "G"; }
+        targetTile.setBackground(TileColors.getColor(goal));
+        topPanel.add(targetTile);
+
+        boardPanel.add(topPanel, BorderLayout.NORTH);
+
+        // Center: tile grid panel
+        JPanel tileGridPanel = new JPanel();
+        tileGridPanel.setBackground(PuralaxConstants.COLOR_CREAM);
+        // Ensure the tile grid has a known preferred size so populateTileGrid can compute tile sizes
+        tileGridPanel.setPreferredSize(new Dimension(PuralaxConstants.WIDTH, PuralaxConstants.HEIGHT - 80));
+        populateTileGrid(model.getNumRows(), model.getNumCols(), tileGridPanel, model.getBoard()); // Display the entire screen as a level
+        boardPanel.add(tileGridPanel, BorderLayout.CENTER);
 
         // Refresh the board with the added tiles
         boardPanel.revalidate();
@@ -244,9 +270,17 @@ public class PuralaxGraphicalView extends JFrame {
         gbc.insets = new Insets(2,2,2,2);
 
         Dimension size = tileGridPanel.getSize();
+        // If the panel hasn't been laid out yet, fall back to preferred size
+        if (size.width <= 0 || size.height <= 0) {
+            size = tileGridPanel.getPreferredSize();
+        }
+        // If still zero (no preferred size), fall back to constants
+        if (size.width <= 0 || size.height <= 0) {
+            size = new Dimension(PuralaxConstants.WIDTH, PuralaxConstants.HEIGHT - 80);
+        }
         // Determine the tile dimension by the smallest dimension available
-        int tileWidth = size.width / numCols;
-        int tileHeight = size.height / numRows;
+        int tileWidth = Math.max(1, size.width / Math.max(1, numCols));
+        int tileHeight = Math.max(1, size.height / Math.max(1, numRows));
         int tileSize = Math.min(tileWidth, tileHeight);
         int reducedSize = (int) (tileSize / 1.4);
 
@@ -275,8 +309,40 @@ public class PuralaxGraphicalView extends JFrame {
         String tileColor = currentTile.getFirstColor();
         int tileNumDots = currentTile.getNumDots();
 
-        JPanel tilePanel = new JPanel(new BorderLayout());
-        tilePanel.setBackground(TileColors.getColor(tileColor));
+        JPanel tilePanel;
+        if (currentTile.isWall()) {
+            // Custom panel that draws diagonal hatch lines to indicate a wall
+            tilePanel = new JPanel(new BorderLayout()) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    int w = getWidth();
+                    int h = getHeight();
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    try {
+                        // Fill background (super.paintComponent already fills when opaque)
+                        g2.setColor(getBackground());
+                        g2.fillRect(0, 0, w, h);
+
+                        // Draw diagonal hatch lines in a lighter gray
+                        g2.setColor(new Color(120, 120, 120));
+                        g2.setStroke(new BasicStroke(2f));
+                        int spacing = 12;
+                        // Draw lines from left-top towards bottom-right across the panel
+                        for (int x = -h; x < w; x += spacing) {
+                            g2.drawLine(x, 0, x + h, h);
+                        }
+                    } finally {
+                        g2.dispose();
+                    }
+                }
+            };
+            tilePanel.setBackground(PuralaxConstants.COLOR_DARK_GRAY);
+            tilePanel.setOpaque(true);
+        } else {
+            tilePanel = new JPanel(new BorderLayout());
+            tilePanel.setBackground(TileColors.getColor(tileColor));
+        }
         // If this tile is currently selected in play mode, show a thin black border to highlight it
         if (gameController.isTileSelected(row, col)) {
             tilePanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
@@ -416,6 +482,8 @@ public class PuralaxGraphicalView extends JFrame {
     private void showLevelCreatorPage() {
         // Reset and configure boardPanel
         resetPage();
+        // Ensure model is not in a started/finished game state when entering level creator
+        gameController.resetGameState();
         // Reset the controller's currentLevel to a 3x3 empty grid
         gameController.currentLevelRows = 3;
         gameController.currentLevelCols = 3;

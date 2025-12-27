@@ -169,4 +169,16 @@ public class GameController {
         selectedCol = -1;
         graphicalView.updateView();
     }
+
+    /**
+     * Resets the model's game state and clears any selection in the controller.
+     * Use this when switching out of gameplay (for example, entering level creator).
+     */
+    public void resetGameState() {
+        if (this.game != null) {
+            this.game.resetGameState();
+        }
+        this.selectedRow = -1;
+        this.selectedCol = -1;
+    }
 }
