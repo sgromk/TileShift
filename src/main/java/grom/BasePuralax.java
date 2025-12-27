@@ -3,10 +3,8 @@ package grom;
 import java.util.List;
 import java.util.ArrayList;
 
-// TODO: look for optimizations in BaseGame code
-// TODO: Add an interface that the View will implement, that requires a modelChanged() method
-//       so that the view knows to update itself
-
+// TODO: Add target colour functionality in level creator
+// TODO: Add level select levels (design some, 10?)
 
 public class BasePuralax implements PuralaxModel<Tile> {
     private List<List<Tile>> gameBoard;
@@ -58,7 +56,7 @@ public class BasePuralax implements PuralaxModel<Tile> {
         for (int i = 0; i < numRows; i++) {                             // For each row
             for (int j = 0; j < numCols; j++) {                         // For each column
                 Tile currentTile = getTileAt(i, j);                     // Get the tile
-                if (currentTile.isEmpty()) {continue;}                    // Move on if it is an empty tile
+                if (currentTile.isEmpty() || currentTile.isWall()) {continue;}                    // Move on if it is an empty tile or a wall
                 else if (!currentTile.matchingFirstColor(goalColor)) {   // Check if the color matches the goal
                     return false;                                       // If any tiles are the wrong color,
                                                                         // then the game is not won
@@ -89,11 +87,17 @@ public class BasePuralax implements PuralaxModel<Tile> {
         if (!isValidIndex(fromRow, fromCol) || !isValidIndex(toRow, toCol)) {
             throw new IllegalArgumentException("Invalid move. Tile indexes outside of board.");}
 
+        // Only allow orthogonal moves of one tile (no diagonal or long-range moves)
+        int rowDiff = Math.abs(fromRow - toRow);
+        int colDiff = Math.abs(fromCol - toCol);
+        if (!((rowDiff == 1 && colDiff == 0) || (rowDiff == 0 && colDiff == 1))) {
+            throw new IllegalArgumentException("Invalid move. Tiles must be adjacent orthogonally.");
+        }
+
         Tile fromTile = getTileAt(fromRow, fromCol);
         Tile toTile = getTileAt(toRow, toCol);
         if (fromTile.getNumDots() < 1) {
-            System.out.println("Initial tile is empty and/or has no dots.");
-            return;
+            throw new IllegalStateException("Initial tile is empty and/or has no dots.");
         } else if (toTile.isWall()) {return;}                           // Ignore the move if the destination is a wall
 
         if (toTile.isEmpty()) {                                 // If the destination is empty
@@ -114,19 +118,40 @@ public class BasePuralax implements PuralaxModel<Tile> {
      * @param colLoc the column index of the current tile
      */
     private void paintTiles(Tile tileToPaint, String newColor, String propagateAlong,int rowLoc, int colLoc) {
-        tileToPaint.paint(newColor, propagateAlong);     // Tile will know whether or not to paint itslf
+        // Only paint tiles that match the original color being propagated and that aren't already the new color
+        if (tileToPaint == null) { return; }
+        String firstColor = tileToPaint.getFirstColor();
+        if (firstColor == null) { return; }
+        if (!firstColor.equals(propagateAlong)) { return; }
+        if (firstColor.equals(newColor)) { return; }
 
+        // Paint this tile
+        tileToPaint.paint(newColor, propagateAlong);
+
+        // Recurse only into neighbors that match the propagateAlong color (prevents cycling)
         if (rowLoc < numRows - 1) {
-            paintTiles(getTileAt(rowLoc + 1, colLoc), newColor, propagateAlong, rowLoc + 1, colLoc); // Paint downwards
+            Tile down = getTileAt(rowLoc + 1, colLoc);
+            if (down.getFirstColor().equals(propagateAlong)) {
+                paintTiles(down, newColor, propagateAlong, rowLoc + 1, colLoc);
+            }
         }
         if (rowLoc > 0) {
-            paintTiles(getTileAt(rowLoc - 1, colLoc), newColor, propagateAlong, rowLoc - 1, colLoc); // Paint upwards
-        } 
+            Tile up = getTileAt(rowLoc - 1, colLoc);
+            if (up.getFirstColor().equals(propagateAlong)) {
+                paintTiles(up, newColor, propagateAlong, rowLoc - 1, colLoc);
+            }
+        }
         if (colLoc < numCols - 1) {
-            paintTiles(getTileAt(rowLoc, colLoc + 1), newColor, propagateAlong, rowLoc, colLoc + 1); // Paint rightwards
+            Tile right = getTileAt(rowLoc, colLoc + 1);
+            if (right.getFirstColor().equals(propagateAlong)) {
+                paintTiles(right, newColor, propagateAlong, rowLoc, colLoc + 1);
+            }
         }
         if (colLoc > 0) {
-            paintTiles(getTileAt(rowLoc, colLoc - 1), newColor, propagateAlong, rowLoc, colLoc - 1); // Paint leftwards
+            Tile left = getTileAt(rowLoc, colLoc - 1);
+            if (left.getFirstColor().equals(propagateAlong)) {
+                paintTiles(left, newColor, propagateAlong, rowLoc, colLoc - 1);
+            }
         }
     }
 

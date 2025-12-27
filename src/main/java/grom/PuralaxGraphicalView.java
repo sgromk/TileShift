@@ -12,10 +12,6 @@ import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
-    // Have related paletteTile "highlight" based on currentSelectedState
-    // Make the base model trigger an event modelChanged() to tell View to refresh
-    // All listeners should forward the action to a controller method - NOT a viewer method
-
 /**
  * Creates a graphical view of the game using Java AWT and Swing. The pages include a title page,
  * a level select, level creator, and active-game page. The board updates every time a move is played.
@@ -26,6 +22,7 @@ public class PuralaxGraphicalView extends JFrame {
     private final GameController gameController;
     private SelectedTileState currentSelectedState;
     private int currentSelectedDots;
+    private final Map<SelectedTileState, JPanel> paletteMap = new HashMap<>();
 
     public PuralaxGraphicalView(BasePuralax model, GameController gameController) {
         this.model = model;
@@ -113,12 +110,30 @@ public class PuralaxGraphicalView extends JFrame {
     public void updateView() {
         renderPlayableLevel();
 
-        if (model.isGameOver()) {
-            if (model.isGameOver()) {
-                String endGameMsg = model.isGameWon() ? "You win!" : "Level failed.";
-                JOptionPane.showMessageDialog(this, endGameMsg, "Game Over", JOptionPane.INFORMATION_MESSAGE);
+        // Only show end-of-game UI when a game has actually been started
+        if (model.isGameStarted() && model.isGameOver()) {
+            String endGameMsg = model.isGameWon() ? "You win!" : "Level failed.";
+            int option = JOptionPane.showConfirmDialog(this, endGameMsg + "\nPlay again?", "Game Over", JOptionPane.YES_NO_OPTION);
+            if (option == JOptionPane.YES_OPTION) {
+                gameController.onReplayChoice(true);
+            } else {
+                gameController.onReplayChoice(false);
             }
         }
+    }
+
+    /**
+     * Show an informational dialog to the user.
+     */
+    public void showInfo(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Info", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Show an error dialog to the user.
+     */
+    public void showError(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     private void populateTileGrid(int numRows, int numCols, JPanel tileGridPanel, List<List<Tile>> graphicalLevel) {
@@ -162,7 +177,12 @@ public class PuralaxGraphicalView extends JFrame {
 
         JPanel tilePanel = new JPanel(new BorderLayout());
         tilePanel.setBackground(TileColors.getColor(tileColor));
-        //tilePanel.setBorder(BorderFactory.createLineBorder(PuralaxConstants.COLOR_MEDIUM_GRAY));
+        // If this tile is currently selected in play mode, show a thin black border to highlight it
+        if (gameController.isTileSelected(row, col)) {
+            tilePanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+        } else {
+            tilePanel.setBorder(BorderFactory.createEmptyBorder(2,2,2,2));
+        }
 
         if (tileNumDots > 0) {
             String repeatedDots = "• ".repeat(tileNumDots);
@@ -175,7 +195,13 @@ public class PuralaxGraphicalView extends JFrame {
         tilePanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                replaceTileInGrid(row, col, tileGridPanel);
+                if (model.isGameStarted()) {
+                    // In play mode, route clicks to controller for selection/move handling
+                    gameController.onTileClicked(row, col);
+                } else {
+                    // In level-creator mode, replace the tile with the currently selected palette tile
+                    replaceTileInGrid(row, col, tileGridPanel);
+                }
             }
         });
 
@@ -193,27 +219,29 @@ public class PuralaxGraphicalView extends JFrame {
             case EMPTY_TILE:
                 break;
             case GREEN_TILE:
-                replacementTile = new Tile(List.of("G"), currentSelectedDots);
+                replacementTile = TileBuilder.builder().color("G").dots(currentSelectedDots).build();
                 break;
             case BLUE_TILE:
-                replacementTile = new Tile(List.of("B"), currentSelectedDots);
+                replacementTile = TileBuilder.builder().color("B").dots(currentSelectedDots).build();
                 break;
             case YELLOW_TILE:
-                replacementTile = new Tile(List.of("Y"), currentSelectedDots);
+                replacementTile = TileBuilder.builder().color("Y").dots(currentSelectedDots).build();
                 break;
             case RED_TILE:
-                replacementTile = new Tile(List.of("R"), currentSelectedDots);
+                replacementTile = TileBuilder.builder().color("R").dots(currentSelectedDots).build();
                 break;
             case PURPLE_TILE:
-                replacementTile = new Tile(List.of("P"), currentSelectedDots);
+                replacementTile = TileBuilder.builder().color("P").dots(currentSelectedDots).build();
                 break;
             case WALL_TILE:
                 replacementTile = new WallTile();
                 break;
         }
-        gameController.currentLevel.get(row).set(col, replacementTile);
+        // Route the change through the controller so it owns model updates
+        gameController.setTileAt(row, col, replacementTile);
 
-        populateTileGrid(gameController.currentLevelRows, gameController.currentLevelCols, 
+        // Re-populate the level-creator tile grid so edits are immediately visible
+        populateTileGrid(gameController.currentLevelRows, gameController.currentLevelCols,
                         tileGridPanel, gameController.currentLevel);
     }
 
@@ -330,18 +358,26 @@ public class PuralaxGraphicalView extends JFrame {
             JPanel paletteTile = new JPanel();
             paletteTile.setBackground(tileColor.color);
             paletteTile.setPreferredSize(new Dimension(30, 30));
+
+            // Start with a thin border for all palette tiles
             paletteTile.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
 
-            // Add a mouse listener if needed to select the tile:
+            // Add a mouse listener to select the tile and update visuals
             paletteTile.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     currentSelectedState = COLOR_TO_STATE_MAP.get(tileColor.color);
+                    updatePaletteSelection();
                 }
             });
 
+            // Keep a reference so we can update its border when selection changes
+            paletteMap.put(COLOR_TO_STATE_MAP.get(tileColor.color), paletteTile);
+
             inputPanel.add(paletteTile); // Add them before rows and cols
         }
+        // Initialize palette visuals according to the currentSelectedState
+        updatePaletteSelection();
         
         // Create the "Rows" label and Spinner
         JLabel rowsLabel = new JLabel("Rows");
@@ -461,6 +497,21 @@ public class PuralaxGraphicalView extends JFrame {
         dotsSpinner.addChangeListener(e -> {
             currentSelectedDots = spinnerModel.getNumber().intValue();
         });
+    }
+
+    // Update palette tile borders to show which palette color is selected
+    private void updatePaletteSelection() {
+        for (Map.Entry<SelectedTileState, JPanel> entry : paletteMap.entrySet()) {
+            SelectedTileState state = entry.getKey();
+            JPanel panel = entry.getValue();
+            if (state == currentSelectedState) {
+                panel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 4));
+            } else {
+                panel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            }
+            panel.revalidate();
+            panel.repaint();
+        }
     }
 
     /**

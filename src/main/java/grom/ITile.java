@@ -67,7 +67,7 @@ class Tile implements ITile {
     }
 
     public Tile copy() {
-        return new Tile(this.colors, this.numDots);
+        return new Tile(new ArrayList<>(this.colors), this.numDots);
     }
 
     public boolean isWall() {
@@ -92,12 +92,15 @@ class Tile implements ITile {
         if (getFirstColor().equals(newColor) || !getFirstColor().equals(paintingAlong)) {
             return;
         } else {
-            for (int i = 0; i < colors.size(); i++) {
-                if (colors.get(i).equals(paintingAlong)) {  // Paints as many nested colors deep as
-                    colors.set(i, newColor);                // matches the paintingAlong color
+            // Avoid mutating the underlying list in-place because it may be an immutable list
+            List<String> newColors = new ArrayList<>(this.colors);
+            for (int i = 0; i < newColors.size(); i++) {
+                if (newColors.get(i).equals(paintingAlong)) {  // Paints as many nested colors deep as
+                    newColors.set(i, newColor);                // matches the paintingAlong color
                 } else {break;}
             }
-        };
+            this.colors = newColors;
+        }
     }
 
     @Override

@@ -2,8 +2,6 @@ package grom;
 
 import java.util.List;
 
-// TODO: Come back and figure out if any more methods need to be added here
-
 /**
  * The model for playing a game of Puralax: this maintains
  * the state and enforces rules of gameplay. 
@@ -74,4 +72,3 @@ public interface PuralaxModel<T> {
      */
     boolean isGameOver() throws IllegalStateException;
 }
-// TODO: Check if any methods from BasePuralax should be defined here

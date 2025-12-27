@@ -16,33 +16,27 @@ class PuralaxBuilder {
 
     // Create the nested ArrayList board data structure by parsing the user input
     public List<List<Tile>> buildBoard(String input, int numRows, int numCols) {
-        boolean builtSuccessfully = false;
         List<List<Tile>> board = new ArrayList<>();
-        while (!builtSuccessfully) {
-            board = new ArrayList<>();
-            String[] rows = input.split("\n");      // Separate user input into rows
+        String[] rows = input.split("\n");      // Separate user input into rows
 
-            if (rows.length != numRows) {
-                System.out.println("Invalid input. Row count mismatch.");
-                break;
+        if (rows.length != numRows) {
+            throw new IllegalArgumentException("Invalid input: row count mismatch.");
+        }
+
+        for (int i = 0; i < numRows; i++) {
+            String[] cells = rows[i].split("\\s+");
+            if (cells.length != numCols) {
+                throw new IllegalArgumentException("Invalid input: column count mismatch.");
             }
 
-            for (int i = 0; i < numRows; i++) {
-                String[] cells = rows[i].split("\\s+");
-                if (cells.length != numCols) {
-                    System.out.println("Invalid input. Column count mismatch.");
-                    break;
-                }
-
-                List<Tile> row = new ArrayList<>();             // Read the user input and add each tile to the row
-                for (String cell : cells) {
-                    Tile tile = parseTile(cell);
-                    row.add(tile);
-                }
-                board.add(row);     // Add each row to the board
+            List<Tile> row = new ArrayList<>();             // Read the user input and add each tile to the row
+            for (String cell : cells) {
+                Tile tile = parseTile(cell);
+                row.add(tile);
             }
-            builtSuccessfully = true;   // Flag to re-try level input on fail
-    }
+            board.add(row);     // Add each row to the board
+        }
+
         return board;       // Return the board
     }
 
@@ -80,7 +74,7 @@ class TileFactory {
         if (color == null || color.isEmpty()) {
             return new EmptyTile();
         }
-        return new Tile(new ArrayList<>(List.of(color)), numDots);
+        return TileBuilder.builder().color(color).dots(numDots).build();
     }
 
     public Tile createEmpty() {

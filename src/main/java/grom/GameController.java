@@ -1,27 +1,26 @@
 package grom;
 
-import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO: Add a 'select tile' visual (maybe dots disappear)
-// TODO: Refactor, reintroduce builder, improve separation of tasks between controller - builder - gui
-// TODO: Move ALL logic handling from GUI to controller -> GUI needs to know NOTHING about the game
+// TODO: Change win screen from dialog popup to something else
 
 
 public class GameController {
-    private Scanner scanner;
     private BasePuralax game;
     private PuralaxGraphicalView graphicalView;
-    private boolean hasQuit;
+    private int selectedRow = -1;
+    private int selectedCol = -1;
+
+    public boolean isTileSelected(int row, int col) {
+        return selectedRow == row && selectedCol == col;
+    }
     public int currentLevelRows;
     public int currentLevelCols;
     public List<List<Tile>> currentLevel;
 
     GameController() {
-        this.scanner = new Scanner(System.in);
         this.game = new BasePuralax();
-        this.hasQuit = false;
         this.currentLevel = new ArrayList<>();
         initializeEmptyLevel();
         this.currentLevelRows = 2;
@@ -29,64 +28,24 @@ public class GameController {
         this.graphicalView = new PuralaxGraphicalView(game, this);
     }
 
-    public void playGame() {
-        // TODO: get goal color
-
-        System.out.println("Game starting");
-        
-        // PuralaxBuilder builder = new PuralaxBuilder();        // Create a level builder
-        // List<List<Tile>> currentLevel = builder.buildBoard(userLevel, userRows, userCols); // Build the level
-
-        // playGameHelper(currentLevel, currentLevelRows, currentLevelCols, "G");    // After getting inputs, call the game with a helper to allow
-                                                                            // retrying to level on failure
-    }
-
     public void startGame() {
-        playGameHelper(currentLevel, currentLevelRows, currentLevelCols, "G");    // After getting inputs, call the game with a helper to allow
-                                                                            // retrying to level on failure
+        // After getting inputs, call the game with a helper to allow retrying to level on failure
+        playGameHelper(currentLevel, currentLevelRows, currentLevelCols, "G");    
     }
 
     /**
-     * Given a constructed level, continues prompting the user for moves until the game is over.
-     * The game is over if the player has won, or if there are no more moves and the player has
-     * lost. Makes a copy of the given level to avoid mutating the original level, to allow for
-     * replaying if the player loses. 
-     * @param currentLevel The given level to be played, as a List<List<Tile>>
-     * @param userRows The number of rows specified for the level
-     * @param userCols The number of columns specified for the level
+     * Start a game using a deep copy of the provided level and refresh the view.
+     * This makes a copy to avoid mutating the held level and allows replaying the
+     * original level data later.
+     * @param currentLevel The level to play as a List<List<Tile>>
+     * @param userRows The number of rows for the level
+     * @param userCols The number of columns for the level
      * @param userGoalColor The goal color to win
      */
     private void playGameHelper(List<List<Tile>> currentLevel, int userRows, int userCols, String userGoalColor) {
         List<List<Tile>> copyLevel = copyBoard(currentLevel);
-        game.startGame(copyLevel, userRows, userCols, userGoalColor);    // Start the game with the created level
-
+        game.startGame(copyLevel, userRows, userCols, userGoalColor);
         graphicalView.updateView();
-        //while (!game.isGameOver() && !hasQuit) {            // Keep playing until the game ends or the user quits
-        //    graphicalView.updateView();                     // Render the board graphical view
-        //    String test = scanner.next();
-       // }
-
-        if (game.isGameOver() && !hasQuit) {                // If the user failed the level
-            graphicalView.updateView();
-            if (!game.isGameWon()) {
-                System.out.println("Try the level again? Y/N:");    // Ask to replay the level if they lost
-                String tryAgain = scanner.next();
-                if (tryAgain.equals("Y") || tryAgain.equals("y")) {
-                    playGameHelper(currentLevel, userRows, userCols, userGoalColor);    // Start a new game
-                }
-            } else {System.out.println("Thanks for playing.");
-                    System.exit(0);
-                }
-        }
-    }
-
-    /**
-     * Prints a quit message and exits the level.
-     */
-    private void quitGame() {
-        hasQuit = true;
-        System.out.println("Game aborted.");
-        System.exit(0);
     }
 
     /**
@@ -120,7 +79,72 @@ public class GameController {
      * @param args
      */
     public static void main(String[] args) {
-        GameController controller = new GameController();
-        controller.playGame();
+        new GameController();
+    }
+
+    /**
+     * Called by the view when the player chooses whether to replay a failed level.
+     * @param tryAgain true if player wants to retry the current level, false to exit
+     */
+    public void onReplayChoice(boolean tryAgain) {
+        if (tryAgain) {
+            playGameHelper(currentLevel, currentLevelRows, currentLevelCols, "G");
+        } else {
+            graphicalView.dispose();
+            System.exit(0);
+        }
+    }
+
+    /**
+     * Called by the view to replace a tile in the held current level.
+     * The controller owns the level data structure and will update the view.
+     */
+    public void setTileAt(int row, int col, Tile tile) {
+        if (row < 0 || row >= currentLevelRows || col < 0 || col >= currentLevelCols) {
+            throw new IllegalArgumentException("Tile coordinates out of range");
+        }
+        currentLevel.get(row).set(col, tile);
+    }
+
+    /**
+     * Handle a tile click during gameplay (select → move).
+     * - Selects a non-empty source when none is selected.
+     * - Deselects if the same tile is clicked.
+     * - Attempts an orthogonal move when a source is selected (invalid moves ignored).
+     * - Clears selection and refreshes the view after the action.
+     */
+    public void onTileClicked(int row, int col) {
+        // If no source selected yet, select this tile as source
+        if (!game.isGameStarted()) { return; }
+
+        if (selectedRow == -1) {
+            // Do not allow selecting empty tiles during gameplay
+            Tile clicked = game.getTileAt(row, col);
+            if (clicked.isEmpty()) { return; }
+            selectedRow = row;
+            selectedCol = col;
+            graphicalView.updateView();
+            return;
+        }
+
+        // If the same tile clicked again, deselect
+        if (selectedRow == row && selectedCol == col) {
+            selectedRow = -1;
+            selectedCol = -1;
+            graphicalView.updateView();
+            return;
+        }
+
+        // Otherwise, attempt to move from selected -> clicked
+        try {
+            game.moveTile(selectedRow, selectedCol, row, col);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            // Invalid move (e.g., no dots or invalid indices)
+        }
+
+        // Clear selection and refresh view
+        selectedRow = -1;
+        selectedCol = -1;
+        graphicalView.updateView();
     }
 }
