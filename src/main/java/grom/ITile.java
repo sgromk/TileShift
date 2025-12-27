@@ -104,17 +104,6 @@ class Tile implements ITile {
     }
 
     @Override
-    /**
-     * toString method that returns either the color or the color 
-     * with the number of dots in parantheses
-     */
-    public String toString() {
-        if (numDots > 0) {
-            return colors + "(" + numDots + ") ";
-        } else {return colors + "    ";}
-    }
-
-    @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
@@ -139,11 +128,6 @@ class Tile implements ITile {
 class EmptyTile extends Tile {
     EmptyTile() {
         super(new ArrayList<>(List.of("LG")), 0);   // Light gray
-    }
-
-    @Override
-    public String toString() {
-        return "_    ";
     }
 
     @Override
@@ -180,11 +164,6 @@ class EmptyTile extends Tile {
 class WallTile extends Tile {
     WallTile() {
         super(new ArrayList<>(List.of("DG")), 0);  // Dark gray
-    }
-
-    @Override
-    public String toString() {
-        return "|   ";
     }
 
     @Override
