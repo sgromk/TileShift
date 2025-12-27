@@ -1,0 +1,31 @@
+[
+  {
+    "goalColor": "G",
+    "rows": 2,
+    "cols": 2,
+    "tiles": [
+      [ { "type": "empty"}, { "color": "B", "dots": 0 }],
+      [ { "color": "G", "dots": 2 }, { "type": "wall" }]
+    ]
+  },
+  {
+    "goalColor": "B",
+    "rows": 3,
+    "cols": 3,
+    "tiles": [
+      [ { "color": "B", "dots": 1 }, { "color": "G", "dots": 0 }, { "type": "empty" } ],
+      [ { "color": "G", "dots": 0 }, { "type": "wall" }, { "color": "B", "dots": 0 } ],
+      [ { "color": "B", "dots": 0 }, { "color": "G", "dots": 0 }, { "color": "B", "dots": 0 } ]
+    ]
+  },
+  {
+    "goalColor": "Y",
+    "rows": 3,
+    "cols": 3,
+    "tiles": [
+      [ { "color": "Y", "dots": 1 }, { "color": "G", "dots": 0 }, { "type": "empty" } ],
+      [ { "color": "G", "dots": 0 }, { "type": "wall" }, { "color": "Y", "dots": 0 } ],
+      [ { "color": "Y", "dots": 0 }, { "color": "G", "dots": 0 }, { "color": "Y", "dots": 0 } ]
+    ]
+  }
+]

@@ -3,9 +3,6 @@ package grom;
 import java.util.List;
 import java.util.ArrayList;
 
-// TODO: Add target colour functionality in level creator
-// TODO: Add level select levels (design some, 10?)
-
 public class BasePuralax implements PuralaxModel<Tile> {
     private List<List<Tile>> gameBoard;
     private int numRows;

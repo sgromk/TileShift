@@ -31,7 +31,7 @@ public class PuralaxGraphicalView extends JFrame {
         this.currentSelectedDots = 0;
 
         // Set up board
-        setTitle("Puralax");
+        setTitle("TileShift");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -44,6 +44,71 @@ public class PuralaxGraphicalView extends JFrame {
 
         pack();
         setVisible(true);
+    }
+
+    /**
+     * Renders the level select page, with a back button and a grid of 9 selectable levels.
+     */
+    private void showLevelSelectPage() {
+        resetPage();
+
+        boardPanel.setLayout(new BorderLayout());
+        boardPanel.setBackground(PuralaxConstants.COLOR_CREAM);
+
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(PuralaxConstants.COLOR_CREAM);
+        topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        JButton back = levelCreatorButton("Back", PuralaxConstants.COLOR_ORANGE);
+        back.addActionListener(e -> showTitlePage());
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        left.setOpaque(false);
+        left.add(back);
+        topPanel.add(left, BorderLayout.WEST);
+
+        JLabel title = new JLabel("Select a Level", SwingConstants.CENTER);
+        title.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(45f));
+        title.setForeground(PuralaxConstants.COLOR_MEDIUM_GRAY);
+        JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        center.setOpaque(false);
+        center.add(title);
+        topPanel.add(center, BorderLayout.CENTER);
+
+        // Add a right placeholder to visually balance the left back button so the title is centered
+        Dimension backSize = back.getPreferredSize();
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        right.setOpaque(false);
+        right.setPreferredSize(new Dimension(backSize.width + 20, backSize.height));
+        topPanel.add(right, BorderLayout.EAST);
+
+        boardPanel.add(topPanel, BorderLayout.NORTH);
+
+        // Center: 3x3 grid for levels 1..9
+        JPanel grid = new JPanel(new GridLayout(3, 3, 20, 20));
+        grid.setBorder(new EmptyBorder(20, 40, 20, 40));
+        grid.setBackground(PuralaxConstants.COLOR_CREAM);
+
+        for (int i = 1; i <= 9; i++) {
+            int idx = i; // capture
+            JButton levelBtn = new JButton(String.valueOf(i));
+            levelBtn.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(22f));
+            // Larger preferred square size; button will be centered inside its grid cell
+            Dimension square = new Dimension(140, 140);
+            levelBtn.setPreferredSize(square);
+            levelBtn.setBackground(PuralaxConstants.COLOR_LIGHT_GRAY);
+            levelBtn.setFocusPainted(false);
+            levelBtn.setMargin(new Insets(0, 0, 0, 0));
+            levelBtn.addActionListener(e -> gameController.startPreset(idx));
+
+            JPanel cell = new JPanel(new GridBagLayout());
+            cell.setOpaque(false);
+            cell.add(levelBtn);
+            grid.add(cell);
+        }
+
+        boardPanel.add(grid, BorderLayout.CENTER);
+        revalidate();
+        repaint();
     }
 
     // Enum to define tile colors from 
@@ -113,12 +178,47 @@ public class PuralaxGraphicalView extends JFrame {
         // Only show end-of-game UI when a game has actually been started
         if (model.isGameStarted() && model.isGameOver()) {
             String endGameMsg = model.isGameWon() ? "You win!" : "Level failed.";
-            int option = JOptionPane.showConfirmDialog(this, endGameMsg + "\nPlay again?", "Game Over", JOptionPane.YES_NO_OPTION);
-            if (option == JOptionPane.YES_OPTION) {
-                gameController.onReplayChoice(true);
-            } else {
-                gameController.onReplayChoice(false);
-            }
+
+            // Create a modal dialog with vertically stacked buttons for Main Menu and Level Select
+            JDialog dialog = new JDialog(this, "Game Over", true);
+            JPanel content = new JPanel();
+            content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+            content.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+            JLabel msgLabel = new JLabel(endGameMsg, SwingConstants.CENTER);
+            msgLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            msgLabel.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(16f));
+            content.add(msgLabel);
+            content.add(Box.createRigidArea(new Dimension(0, 12)));
+
+            // Buttons panel (vertical)
+            JPanel buttons = new JPanel();
+            buttons.setLayout(new BoxLayout(buttons, BoxLayout.Y_AXIS));
+            buttons.setOpaque(false);
+
+            JButton mainMenu = new JButton("Main Menu");
+            mainMenu.setAlignmentX(Component.CENTER_ALIGNMENT);
+            mainMenu.addActionListener(e -> {
+                dialog.dispose();
+                showTitlePage();
+            });
+            buttons.add(mainMenu);
+            buttons.add(Box.createRigidArea(new Dimension(0, 8)));
+
+            JButton levelSelect = new JButton("Level Select");
+            levelSelect.setAlignmentX(Component.CENTER_ALIGNMENT);
+            levelSelect.addActionListener(e -> {
+                dialog.dispose();
+                showLevelSelectPage();
+            });
+            buttons.add(levelSelect);
+
+            content.add(buttons);
+
+            dialog.setContentPane(content);
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
         }
     }
 
@@ -260,7 +360,7 @@ public class PuralaxGraphicalView extends JFrame {
         boardPanel.add(Box.createRigidArea(new Dimension(0, PuralaxConstants.HEIGHT / 6)));  // One-third down the title page
 
         // Add the main game name label
-        JLabel titleLabel = new JLabel("PURALAX", SwingConstants.CENTER);
+        JLabel titleLabel = new JLabel("TileShift", SwingConstants.CENTER);
         titleLabel.setFont(PuralaxConstants.TITLE_FONT);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center horizontally
         titleLabel.setForeground(PuralaxConstants.COLOR_TITLE_PAGE); // Pastel purple
@@ -277,7 +377,7 @@ public class PuralaxGraphicalView extends JFrame {
         boardPanel.add(Box.createRigidArea(new Dimension(0, 100)));
 
         // Level Select button, with style parameters and alignment
-        JButton levelSelectButton = createTitlePageButton("Level Select", PuralaxConstants.COLOR_BLUE, null);
+        JButton levelSelectButton = createTitlePageButton("Level Select", PuralaxConstants.COLOR_BLUE, e -> showLevelSelectPage());
         boardPanel.add(levelSelectButton);
 
         // Add the title panel to the frame
@@ -316,6 +416,17 @@ public class PuralaxGraphicalView extends JFrame {
     private void showLevelCreatorPage() {
         // Reset and configure boardPanel
         resetPage();
+        // Reset the controller's currentLevel to a 3x3 empty grid
+        gameController.currentLevelRows = 3;
+        gameController.currentLevelCols = 3;
+        gameController.currentLevel = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            List<Tile> row = new ArrayList<>();
+            for (int j = 0; j < 3; j++) {
+                row.add(new EmptyTile());
+            }
+            gameController.currentLevel.add(row);
+        }
 
         // Create a panel to hold the back button and add it to the top of the boardPanel
         JPanel topPanel = new JPanel();
@@ -327,6 +438,49 @@ public class PuralaxGraphicalView extends JFrame {
         JButton backButton = levelCreatorButton("Back", PuralaxConstants.COLOR_ORANGE);
         backButton.addActionListener(e -> showTitlePage());
         topPanel.add(backButton);
+
+        topPanel.add(Box.createHorizontalGlue());
+
+        // Target selector (center top)
+        JPanel targetPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        targetPanel.setOpaque(false);
+        JLabel targetLabel = new JLabel("Target ");
+        targetLabel.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(25f));
+        targetPanel.add(targetLabel);
+
+        // Small tile showing current target color (slightly larger than palette tiles)
+        JPanel targetTile = new JPanel();
+        targetTile.setPreferredSize(new Dimension(40, 40));
+        targetTile.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+        // default target is green
+        targetTile.setBackground(PuralaxConstants.COLOR_GREEN);
+
+        targetTile.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Only change target to a paintable color (no empty or wall)
+                if (currentSelectedState == SelectedTileState.EMPTY_TILE || currentSelectedState == SelectedTileState.WALL_TILE) {
+                    return;
+                }
+                // Map SelectedTileState to color code
+                String code = switch (currentSelectedState) {
+                    case GREEN_TILE -> "G";
+                    case BLUE_TILE -> "B";
+                    case YELLOW_TILE -> "Y";
+                    case RED_TILE -> "R";
+                    case PURPLE_TILE -> "P";
+                    default -> null;
+                };
+                if (code != null) {
+                    // Update visual and inform controller
+                    targetTile.setBackground(TileColors.getColor(code));
+                    gameController.setGoalColor(code);
+                }
+            }
+        });
+
+        targetPanel.add(targetTile);
+        topPanel.add(targetPanel);
 
         topPanel.add(Box.createHorizontalGlue());
 

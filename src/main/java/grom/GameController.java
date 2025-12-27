@@ -3,14 +3,13 @@ package grom;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO: Change win screen from dialog popup to something else
-
-
 public class GameController {
     private BasePuralax game;
     private PuralaxGraphicalView graphicalView;
     private int selectedRow = -1;
     private int selectedCol = -1;
+    private String goalColor = "G"; // default target color
+    private LevelLoader levelLoader = new LevelLoader();
 
     public boolean isTileSelected(int row, int col) {
         return selectedRow == row && selectedCol == col;
@@ -29,8 +28,8 @@ public class GameController {
     }
 
     public void startGame() {
-        // After getting inputs, call the game with a helper to allow retrying to level on failure
-        playGameHelper(currentLevel, currentLevelRows, currentLevelCols, "G");    
+        // After getting inputs, call the game with the selected goal color
+        playGameHelper(currentLevel, currentLevelRows, currentLevelCols, goalColor);
     }
 
     /**
@@ -88,11 +87,20 @@ public class GameController {
      */
     public void onReplayChoice(boolean tryAgain) {
         if (tryAgain) {
-            playGameHelper(currentLevel, currentLevelRows, currentLevelCols, "G");
+            playGameHelper(currentLevel, currentLevelRows, currentLevelCols, goalColor);
         } else {
             graphicalView.dispose();
             System.exit(0);
         }
+    }
+
+    /**
+     * Set the desired goal color for the next game start (e.g. "G", "B").
+     * Ignored if null or empty.
+     */
+    public void setGoalColor(String colorCode) {
+        if (colorCode == null || colorCode.isEmpty()) { return; }
+        this.goalColor = colorCode;
     }
 
     /**
@@ -104,6 +112,20 @@ public class GameController {
             throw new IllegalArgumentException("Tile coordinates out of range");
         }
         currentLevel.get(row).set(col, tile);
+    }
+
+    /**
+     * Start a placeholder preset level by index (1-based). This creates a small
+     * board to allow the UI to start a game; you can replace with real levels later.
+     */
+    public void startPreset(int index) {
+        // index is 1-based from UI, but LevelLoader is 0-based
+        LevelLoader.LoadedLevel lvl = levelLoader.getLevel(index - 1);
+        this.currentLevel = lvl.board;
+        this.currentLevelRows = lvl.rows;
+        this.currentLevelCols = lvl.cols;
+        this.goalColor = lvl.goalColor;
+        playGameHelper(currentLevel, currentLevelRows, currentLevelCols, goalColor);
     }
 
     /**
