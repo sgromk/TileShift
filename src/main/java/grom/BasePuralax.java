@@ -82,7 +82,8 @@ public class BasePuralax implements PuralaxModel<Tile> {
 
     public void moveTile(int fromRow, int fromCol, int toRow, int toCol) {
         if (!isValidIndex(fromRow, fromCol) || !isValidIndex(toRow, toCol)) {
-            throw new IllegalArgumentException("Invalid move. Tile indexes outside of board.");}
+            throw new IllegalArgumentException("Invalid move. Tile indexes outside of board.");
+        }
 
         // Only allow orthogonal moves of one tile (no diagonal or long-range moves)
         int rowDiff = Math.abs(fromRow - toRow);
@@ -95,15 +96,23 @@ public class BasePuralax implements PuralaxModel<Tile> {
         Tile toTile = getTileAt(toRow, toCol);
         if (fromTile.getNumDots() < 1) {
             throw new IllegalStateException("Initial tile is empty and/or has no dots.");
-        } else if (toTile.isWall()) {return;}                           // Ignore the move if the destination is a wall
+        } else if (toTile.isWall()) {
+            return; // Ignore the move if the destination is a wall
+        }
+
+        // If trying to paint a tile with the same color as the source, do nothing
+        if (!toTile.isEmpty() && toTile.getFirstColor().equals(fromTile.getFirstColor())) {
+            return;
+        }
 
         if (toTile.isEmpty()) {                                 // If the destination is empty
             gameBoard.get(toRow).set(toCol, fromTile);                  // Only move the initial tile
             gameBoard.get(fromRow).set(fromCol, new EmptyTile());
+            fromTile.useDot();
         } else {
-            paintTiles(toTile, fromTile.getFirstColor(), toTile.getFirstColor(), toRow, toCol);      // Propogate the painting along same-colored tiles
+            paintTiles(toTile, fromTile.getFirstColor(), toTile.getFirstColor(), toRow, toCol);      // Propagate the painting along same-colored tiles
+            fromTile.useDot();
         }
-        fromTile.useDot();                                              // And use up a dot if a move was able to be played
     }
 
     /**
