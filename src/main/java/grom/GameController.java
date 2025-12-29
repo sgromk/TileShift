@@ -157,17 +157,27 @@ public class GameController {
             return;
         }
 
+        // Capture board state before move for animation
+        List<List<Tile>> beforeBoard = copyBoard(game.getBoard());
+        int fromRow = selectedRow, fromCol = selectedCol;
+        int toRow = row, toCol = col;
+
         // Otherwise, attempt to move from selected -> clicked
         try {
-            game.moveTile(selectedRow, selectedCol, row, col);
+            game.moveTile(fromRow, fromCol, toRow, toCol);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             // Invalid move (e.g., no dots or invalid indices)
         }
 
-        // Clear selection and refresh view
+        // Capture board state after move
+        List<List<Tile>> afterBoard = copyBoard(game.getBoard());
+
+        // Clear selection
         selectedRow = -1;
         selectedCol = -1;
-        graphicalView.updateView();
+
+        // Compute paint propagation for animation, or update view directly if no animation needed
+        graphicalView.animateOrUpdateView(beforeBoard, afterBoard, fromRow, fromCol, toRow, toCol, game.getNumRows(), game.getNumCols());
     }
 
     /**

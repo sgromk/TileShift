@@ -47,6 +47,251 @@ public class PuralaxGraphicalView extends JFrame {
     }
 
     /**
+     * Animate paint propagation by computing the paint tree and drawing tiles level-by-level
+     * with sliding color overlay. Groups tiles at same propagation depth to animate together.
+     */
+    public void animateOrUpdateView(List<List<Tile>> before, List<List<Tile>> after,
+                                    int fromRow, int fromCol, int toRow, int toCol,
+                                    int numRows, int numCols) {
+        // Compute which tiles were painted and their propagation depth/parent
+        String propagateAlong = before.get(toRow).get(toCol).getFirstColor();
+        String newColor = before.get(fromRow).get(fromCol).getFirstColor();
+        
+        // BFS to build propagation tree: depth[r][c] = propagation depth, parent[r][c] = (parentRow, parentCol)
+        int[][] depth = new int[numRows][numCols];
+        int[][][] parent = new int[numRows][numCols][2];
+        boolean[][] visited = new boolean[numRows][numCols];
+        java.util.ArrayDeque<int[]> q = new java.util.ArrayDeque<>();
+        
+        for (int i = 0; i < numRows; i++) {
+            for (int j = 0; j < numCols; j++) {
+                depth[i][j] = -1;
+                parent[i][j][0] = -1;
+                parent[i][j][1] = -1;
+            }
+        }
+        
+        depth[toRow][toCol] = 0;
+        visited[toRow][toCol] = true;
+        q.add(new int[]{toRow, toCol, fromRow, fromCol}); // parent is the source tile
+        
+        while (!q.isEmpty()) {
+            int[] cur = q.removeFirst();
+            int r = cur[0], c = cur[1], pr = cur[2], pc = cur[3];
+            parent[r][c][0] = pr;
+            parent[r][c][1] = pc;
+            
+            // Explore neighbors that match propagateAlong in BEFORE board
+            int[][] nbrs = {{r-1,c}, {r+1,c}, {r,c-1}, {r,c+1}};
+            for (int[] n : nbrs) {
+                int nr = n[0], nc = n[1];
+                if (nr < 0 || nr >= numRows || nc < 0 || nc >= numCols || visited[nr][nc]) continue;
+                if (before.get(nr).get(nc).getFirstColor().equals(propagateAlong)) {
+                    visited[nr][nc] = true;
+                    depth[nr][nc] = depth[r][c] + 1;
+                    q.add(new int[]{nr, nc, r, c});
+                }
+            }
+        }
+        
+        // Collect tiles that changed: group by depth
+        java.util.List<java.util.List<PaintTileInfo>> tilesByDepth = new ArrayList<>();
+        for (int i = 0; i < numRows; i++) {
+            for (int j = 0; j < numCols; j++) {
+                if (depth[i][j] >= 0) {
+                    String beforeColor = before.get(i).get(j).getFirstColor();
+                    String afterColor = after.get(i).get(j).getFirstColor();
+                    if (!beforeColor.equals(afterColor) && afterColor.equals(newColor)) {
+                        // This tile was painted; add to appropriate depth list
+                        while (tilesByDepth.size() <= depth[i][j]) {
+                            tilesByDepth.add(new ArrayList<>());
+                        }
+                        Direction dir = computeDirection(parent[i][j][0], parent[i][j][1], i, j);
+                        tilesByDepth.get(depth[i][j]).add(new PaintTileInfo(i, j, dir, afterColor));
+                    }
+                }
+            }
+        }
+        
+        if (tilesByDepth.isEmpty()) {
+            // No paint animation needed
+            updateView();
+            return;
+        }
+        
+        // Skip animation if destination tile was empty (no propagation needed)
+        String destinationBefore = before.get(toRow).get(toCol).getFirstColor();
+        if (destinationBefore.equals("LG")) {
+            // Moving to an empty tile, just update instantly
+            updateView();
+            return;
+        }
+        
+        // Start animation with depth-based progress
+        animatePaintDepthTier(tilesByDepth);
+    }
+    
+    private Direction computeDirection(int parentRow, int parentCol, int r, int c) {
+        if (parentRow < 0) return Direction.UP; // No parent
+        if (parentRow == r - 1) return Direction.DOWN;  // parent above, paint slides down
+        if (parentRow == r + 1) return Direction.UP;    // parent below, paint slides up
+        if (parentCol == c - 1) return Direction.RIGHT; // parent left, paint slides right
+        if (parentCol == c + 1) return Direction.LEFT;  // parent right, paint slides left
+        return Direction.UP;
+    }
+    
+    private enum Direction {
+        UP, DOWN, LEFT, RIGHT
+    }
+    
+    private static class PaintTileInfo {
+        final int row, col;
+        final Direction dir;
+        final String afterColor;
+        
+        PaintTileInfo(int row, int col, Direction dir, String afterColor) {
+            this.row = row;
+            this.col = col;
+            this.dir = dir;
+            this.afterColor = afterColor;
+        }
+    }
+    
+    /**
+     * Animate paint propagation tier-by-tier: each depth level animates together.
+     */
+    private void animatePaintDepthTier(java.util.List<java.util.List<PaintTileInfo>> tilesByDepth) {
+        // Get grid bounds for overlay
+        Component centerGrid = null;
+        for (Component c : boardPanel.getComponents()) {
+            if (c instanceof Container && ((Container) c).getLayout() instanceof GridBagLayout) {
+                centerGrid = c;
+                break;
+            }
+        }
+        if (centerGrid == null) {
+            updateView();
+            return;
+        }
+        
+        // Get actual tile component bounds from the grid
+        java.util.Map<String, java.awt.Rectangle> tileBounds = new java.util.HashMap<>();
+        GridBagLayout layout = (GridBagLayout) ((Container) centerGrid).getLayout();
+        for (Component comp : ((Container) centerGrid).getComponents()) {
+            GridBagConstraints gbc = layout.getConstraints(comp);
+            if (gbc.gridx >= 0 && gbc.gridy >= 0) {
+                String key = gbc.gridx + "," + gbc.gridy;
+                tileBounds.put(key, comp.getBounds());
+            }
+        }
+        
+        // Get the grid's actual size
+        int gridWidth = centerGrid.getWidth();
+        int gridHeight = centerGrid.getHeight();
+        
+        // Convert grid location to glass pane coordinates
+        java.awt.Point gridPos = new java.awt.Point(0, 0);
+        gridPos = SwingUtilities.convertPoint(centerGrid, gridPos, getRootPane().getGlassPane());
+        
+        JComponent glass = (JComponent) getRootPane().getGlassPane();
+        glass.setVisible(true);
+        glass.setLayout(null);
+        
+        PaintAnimationOverlay overlay = new PaintAnimationOverlay(tilesByDepth, tileBounds);
+        overlay.setBounds(gridPos.x, gridPos.y, gridWidth, gridHeight);
+        glass.add(overlay);
+        glass.revalidate();
+        glass.repaint();
+        
+        // Animate tier-by-tier
+        int tierDurationMs = 140;
+        int totalMs = tilesByDepth.size() * tierDurationMs;
+        final long startTime = System.currentTimeMillis();
+        
+        Timer timer = new Timer(16, null);
+        timer.addActionListener(e -> {
+            float t = Math.min(1f, (System.currentTimeMillis() - startTime) / (float) totalMs);
+            overlay.setProgress(t);
+            overlay.repaint();
+            if (t >= 1f) {
+                ((Timer) e.getSource()).stop();
+                glass.remove(overlay);
+                glass.setVisible(false);
+                updateView();
+            }
+        });
+        timer.setInitialDelay(0);
+        timer.start();
+    }
+    
+    private class PaintAnimationOverlay extends JComponent {
+        private final java.util.List<java.util.List<PaintTileInfo>> tilesByDepth;
+        private final java.util.Map<String, java.awt.Rectangle> tileBounds;
+        private float progress = 0f;
+        
+        PaintAnimationOverlay(java.util.List<java.util.List<PaintTileInfo>> tilesByDepth, java.util.Map<String, java.awt.Rectangle> tileBounds) {
+            this.tilesByDepth = tilesByDepth;
+            this.tileBounds = tileBounds;
+            setOpaque(false);
+        }
+        
+        void setProgress(float p) {
+            this.progress = Math.max(0f, Math.min(1f, p));
+        }
+        
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                int numTiers = tilesByDepth.size();
+                
+                for (int tier = 0; tier < numTiers; tier++) {
+                    float tierStart = tier / (float) numTiers;
+                    float tierEnd = (tier + 1) / (float) numTiers;
+                    float tierProgress = 0f;
+                    if (progress >= tierEnd) tierProgress = 1f;
+                    else if (progress <= tierStart) tierProgress = 0f;
+                    else tierProgress = (progress - tierStart) / (tierEnd - tierStart);
+                    
+                    for (PaintTileInfo info : tilesByDepth.get(tier)) {
+                        String key = info.col + "," + info.row;
+                        java.awt.Rectangle bounds = tileBounds.get(key);
+                        if (bounds == null) continue; // Skip if bounds not found
+                        
+                        int x = bounds.x;
+                        int y = bounds.y;
+                        int tileW = bounds.width;
+                        int tileH = bounds.height;
+                        Color newC = TileColors.getColor(info.afterColor);
+                        
+                        // Only draw the sliding new color, don't redraw the tile background
+                        if (tierProgress > 0f) {
+                            int sx = x, sy = y, sw = tileW, sh = tileH;
+                            switch (info.dir) {
+                                case LEFT -> {
+                                    sw = (int) (tileW * tierProgress);
+                                    sx = x + tileW - sw;
+                                }
+                                case RIGHT -> sw = (int) (tileW * tierProgress);
+                                case UP -> {
+                                    sh = (int) (tileH * tierProgress);
+                                    sy = y + tileH - sh;
+                                }
+                                case DOWN -> sh = (int) (tileH * tierProgress);
+                            }
+                            g2.setColor(newC);
+                            g2.fillRect(sx, sy, Math.max(0, sw), Math.max(0, sh));
+                        }
+                    }
+                }
+            } finally {
+                g2.dispose();
+            }
+        }
+    }
+
+    /**
      * Renders the level select page, with a back button and a grid of 9 selectable levels.
      */
     private void showLevelSelectPage() {
@@ -160,10 +405,6 @@ public class PuralaxGraphicalView extends JFrame {
         COLOR_TO_STATE_MAP.put(PuralaxConstants.COLOR_PURPLE, SelectedTileState.PURPLE_TILE);
         COLOR_TO_STATE_MAP.put(PuralaxConstants.COLOR_LIGHT_GRAY, SelectedTileState.EMPTY_TILE);
         COLOR_TO_STATE_MAP.put(PuralaxConstants.COLOR_DARK_GRAY, SelectedTileState.WALL_TILE);
-    }
-
-    private void renderPlayableLevel() {
-        renderPlayableLevel(false, false);
     }
 
     private void renderPlayableLevel(boolean showFail, boolean showWin) {
