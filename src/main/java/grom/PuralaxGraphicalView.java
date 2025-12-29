@@ -163,15 +163,15 @@ public class PuralaxGraphicalView extends JFrame {
     }
 
     private void renderPlayableLevel() {
-        renderPlayableLevel(false);
+        renderPlayableLevel(false, false);
     }
 
-    private void renderPlayableLevel(boolean showFail) {
+    private void renderPlayableLevel(boolean showFail, boolean showWin) {
         boardPanel.removeAll();
         boardPanel.setLayout(new BorderLayout());
         boardPanel.setBackground(PuralaxConstants.COLOR_CREAM);
 
-        // Top: menu, target, restart
+        // Top: menu, target/win/fail, restart
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setOpaque(false);
         topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
@@ -184,24 +184,39 @@ public class PuralaxGraphicalView extends JFrame {
         leftPanel.add(menuButton);
         topPanel.add(leftPanel, BorderLayout.WEST);
 
-        // Target color (center) - match level creator style
+        // Center: win/fail/target
         JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         centerPanel.setOpaque(false);
-        JLabel targetLabel = new JLabel("Target ");
-        targetLabel.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(25f));
-        centerPanel.add(targetLabel);
-        JPanel targetTile = new JPanel();
-        targetTile.setPreferredSize(new Dimension(40, 40));
-        targetTile.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
-        String goal = model.getGoalColor();
-        if (goal == null || goal.isEmpty()) { goal = "G"; }
-        targetTile.setBackground(TileColors.getColor(goal));
-        centerPanel.add(targetTile);
+        if (showFail) {
+            JLabel failLabel = new JLabel("Level Failed");
+            failLabel.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(38f));
+            failLabel.setForeground(Color.RED);
+            centerPanel.add(failLabel);
+        } else if (showWin) {
+            JLabel winLabel = new JLabel("You win!");
+            winLabel.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(38f));
+            winLabel.setForeground(new Color(0, 180, 0));
+            centerPanel.add(winLabel);
+        } else {
+            JLabel targetLabel = new JLabel("Target ");
+            targetLabel.setFont(PuralaxConstants.BUTTON_FONT.deriveFont(25f));
+            centerPanel.add(targetLabel);
+            JPanel targetTile = new JPanel();
+            targetTile.setPreferredSize(new Dimension(40, 40));
+            targetTile.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+            String goal = model.getGoalColor();
+            if (goal == null || goal.isEmpty()) { goal = "G"; }
+            targetTile.setBackground(TileColors.getColor(goal));
+            centerPanel.add(targetTile);
+        }
         topPanel.add(centerPanel, BorderLayout.CENTER);
 
         // Restart button (top right, styled like level creator)
         JButton restartButton = levelCreatorButton("Restart", PuralaxConstants.COLOR_BLUE);
-        restartButton.addActionListener(e -> gameController.onReplayChoice(true));
+        restartButton.addActionListener(e -> {
+            renderPlayableLevel(false, false);
+            gameController.onReplayChoice(true);
+        });
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         rightPanel.setOpaque(false);
         rightPanel.add(restartButton);
@@ -225,12 +240,16 @@ public class PuralaxGraphicalView extends JFrame {
      * Calls renderBoardGraphic and decides if an end of game message should be displayed
      */
     public void updateView() {
-        // Always show fail state if game is over and not won
         boolean showFail = false;
-        if (model.isGameOver() && !model.isGameWon()) {
-            showFail = true;
+        boolean showWin = false;
+        if (model.isGameOver()) {
+            if (model.isGameWon()) {
+                showWin = true;
+            } else {
+                showFail = true;
+            }
         }
-        renderPlayableLevel(showFail);
+        renderPlayableLevel(showFail, showWin);
     }
 
     /**
@@ -329,7 +348,7 @@ public class PuralaxGraphicalView extends JFrame {
             tilePanel.setBackground(TileColors.getColor(tileColor));
         }
         // If this tile is currently selected in play mode, show a thin black border to highlight it
-        if (gameController.isTileSelected(row, col)) {
+        if (model.isGameStarted() && tileNumDots > 0 && gameController.isTileSelected(row, col)) {
             tilePanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         } else {
             tilePanel.setBorder(BorderFactory.createEmptyBorder(2,2,2,2));
@@ -347,8 +366,14 @@ public class PuralaxGraphicalView extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (model.isGameStarted()) {
-                    // In play mode, route clicks to controller for selection/move handling
-                    gameController.onTileClicked(row, col);
+                    // Only restrict initial selection to tiles with dots
+                    if (gameController.isTileSelected(-1, -1)) {
+                        if (tileNumDots > 0) {
+                            gameController.onTileClicked(row, col);
+                        }
+                    } else {
+                        gameController.onTileClicked(row, col);
+                    }
                 } else {
                     // In level-creator mode, replace the tile with the currently selected palette tile
                     replaceTileInGrid(row, col, tileGridPanel);
