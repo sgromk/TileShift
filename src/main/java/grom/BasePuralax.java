@@ -1,7 +1,11 @@
 package grom;
 
+import java.util.ArrayDeque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Queue;
+import java.util.Set;
 
 public class BasePuralax implements PuralaxModel<Tile> {
     private List<List<Tile>> gameBoard;
@@ -116,47 +120,59 @@ public class BasePuralax implements PuralaxModel<Tile> {
     }
 
     /**
-     * If a tile should be painted, paints the tile and continues propagating in all directions
+     * Paint tiles using iterative BFS flood-fill to avoid stack overflow.
+     * If a tile should be painted, paints the tile and continues propagating in all directions.
      * @param tileToPaint the target tile that should be painted if it is the color of propagateAlong
      * @param newColor the new color, if the tile is to be painted
      * @param propagateAlong the color to be painted over
      * @param rowLoc the row index of the current tile
      * @param colLoc the column index of the current tile
      */
-    private void paintTiles(Tile tileToPaint, String newColor, String propagateAlong,int rowLoc, int colLoc) {
-        // Only paint tiles that match the original color being propagated and that aren't already the new color
-        if (tileToPaint == null) { return; }
+    private void paintTiles(Tile tileToPaint, String newColor, String propagateAlong, int rowLoc, int colLoc) {
+        // Initial validation
+        if (tileToPaint == null) return;
         String firstColor = tileToPaint.getFirstColor();
-        if (firstColor == null) { return; }
-        if (!firstColor.equals(propagateAlong)) { return; }
-        if (firstColor.equals(newColor)) { return; }
+        if (firstColor == null || !firstColor.equals(propagateAlong) || firstColor.equals(newColor)) {
+            return;
+        }
 
-        // Paint this tile
-        tileToPaint.paint(newColor, propagateAlong);
-
-        // Recurse only into neighbors that match the propagateAlong color (prevents cycling)
-        if (rowLoc < numRows - 1) {
-            Tile down = getTileAt(rowLoc + 1, colLoc);
-            if (down.getFirstColor().equals(propagateAlong)) {
-                paintTiles(down, newColor, propagateAlong, rowLoc + 1, colLoc);
+        // Use BFS with queue to avoid recursion/stack overflow
+        Queue<int[]> queue = new ArrayDeque<>();
+        Set<String> visited = new HashSet<>();
+        
+        queue.add(new int[]{rowLoc, colLoc});
+        visited.add(rowLoc + "," + colLoc);
+        
+        while (!queue.isEmpty()) {
+            int[] pos = queue.poll();
+            int r = pos[0];
+            int c = pos[1];
+            
+            Tile tile = getTileAt(r, c);
+            String tileColor = tile.getFirstColor();
+            
+            // Only paint if it matches the propagate color and isn't already the new color
+            if (tileColor == null || !tileColor.equals(propagateAlong) || tileColor.equals(newColor)) {
+                continue;
             }
-        }
-        if (rowLoc > 0) {
-            Tile up = getTileAt(rowLoc - 1, colLoc);
-            if (up.getFirstColor().equals(propagateAlong)) {
-                paintTiles(up, newColor, propagateAlong, rowLoc - 1, colLoc);
-            }
-        }
-        if (colLoc < numCols - 1) {
-            Tile right = getTileAt(rowLoc, colLoc + 1);
-            if (right.getFirstColor().equals(propagateAlong)) {
-                paintTiles(right, newColor, propagateAlong, rowLoc, colLoc + 1);
-            }
-        }
-        if (colLoc > 0) {
-            Tile left = getTileAt(rowLoc, colLoc - 1);
-            if (left.getFirstColor().equals(propagateAlong)) {
-                paintTiles(left, newColor, propagateAlong, rowLoc, colLoc - 1);
+            
+            // Paint this tile
+            tile.paint(newColor, propagateAlong);
+            
+            // Add orthogonal neighbors to queue if they match propagateAlong color
+            int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            for (int[] dir : directions) {
+                int nr = r + dir[0];
+                int nc = c + dir[1];
+                String key = nr + "," + nc;
+                
+                if (isValidIndex(nr, nc) && !visited.contains(key)) {
+                    Tile neighbor = getTileAt(nr, nc);
+                    if (neighbor.getFirstColor() != null && neighbor.getFirstColor().equals(propagateAlong)) {
+                        visited.add(key);
+                        queue.add(new int[]{nr, nc});
+                    }
+                }
             }
         }
     }

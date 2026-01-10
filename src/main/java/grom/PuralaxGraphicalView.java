@@ -11,6 +11,7 @@ import java.util.Map;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import com.google.gson.*;
 
 /**
  * Creates a graphical view of the game using Java AWT and Swing. The pages include a title page,
@@ -323,8 +324,54 @@ public class PuralaxGraphicalView extends JFrame {
         right.setOpaque(false);
         JButton generateButton = levelCreatorButton("Generate", PuralaxConstants.COLOR_PURPLE);
         generateButton.addActionListener(e -> {
-            // Placeholder for generate level functionality
-            showInfo("Generate Level clicked!");
+            // Generate a 5x5 level using selected goal color
+            LevelGenerator generator = new LevelGenerator();
+            String targetColor = gameController.getGoalColor();
+            String jsonStr = generator.generateLevelAsJson(5, 5, targetColor);
+            
+            try {
+                // Parse the JSON string to a LoadedLevel
+                Gson gson = new Gson();
+                JsonObject json = gson.fromJson(jsonStr, JsonObject.class);
+                String goalColor = json.get("goalColor").getAsString();
+                int rows = json.get("rows").getAsInt();
+                int cols = json.get("cols").getAsInt();
+                JsonArray tilesArray = json.getAsJsonArray("tiles");
+                
+                // Convert tiles array to List<List<Tile>>
+                List<List<Tile>> board = new ArrayList<>();
+                for (int r = 0; r < rows; r++) {
+                    List<Tile> row = new ArrayList<>();
+                    JsonArray rowArray = tilesArray.get(r).getAsJsonArray();
+                    for (int c = 0; c < cols; c++) {
+                        JsonObject tileObj = rowArray.get(c).getAsJsonObject();
+                        Tile tile;
+                        
+                        if (tileObj.has("type")) {
+                            String type = tileObj.get("type").getAsString();
+                            if ("empty".equals(type)) {
+                                tile = TileBuilder.empty();
+                            } else if ("wall".equals(type)) {
+                                tile = TileBuilder.wall();
+                            } else {
+                                tile = TileBuilder.builder().color(type).dots(0).build();
+                            }
+                        } else {
+                            String color = tileObj.get("color").getAsString();
+                            int dots = tileObj.has("dots") ? tileObj.get("dots").getAsInt() : 0;
+                            tile = TileBuilder.builder().color(color).dots(dots).build();
+                        }
+                        row.add(tile);
+                    }
+                    board.add(row);
+                }
+                
+                // Create LoadedLevel and play it
+                LevelLoader.LoadedLevel level = new LevelLoader.LoadedLevel(goalColor, rows, cols, board);
+                gameController.playGeneratedLevel(level);
+            } catch (Exception ex) {
+                showInfo("Error generating level: " + ex.getMessage());
+            }
         });
         right.add(generateButton);
         topPanel.add(right, BorderLayout.EAST);

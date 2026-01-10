@@ -104,6 +104,13 @@ public class GameController {
     }
 
     /**
+     * Returns the currently selected goal color code used for generation and gameplay.
+     */
+    public String getGoalColor() {
+        return this.goalColor;
+    }
+
+    /**
      * Called by the view to replace a tile in the held current level.
      * The controller owns the level data structure and will update the view.
      */
@@ -121,6 +128,18 @@ public class GameController {
     public void startPreset(int index) {
         // index is 1-based from UI, but LevelLoader is 0-based
         LevelLoader.LoadedLevel lvl = levelLoader.getLevel(index - 1);
+        this.currentLevel = lvl.board;
+        this.currentLevelRows = lvl.rows;
+        this.currentLevelCols = lvl.cols;
+        this.goalColor = lvl.goalColor;
+        playGameHelper(currentLevel, currentLevelRows, currentLevelCols, goalColor);
+    }
+
+    /**
+     * Load and start a generated level from a LoadedLevel object.
+     * @param lvl the LoadedLevel to play
+     */
+    public void playGeneratedLevel(LevelLoader.LoadedLevel lvl) {
         this.currentLevel = lvl.board;
         this.currentLevelRows = lvl.rows;
         this.currentLevelCols = lvl.cols;
