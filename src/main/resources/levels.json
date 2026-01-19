@@ -50,12 +50,15 @@
     ]
   },
   {
-    "goalColor": "G",
-    "rows": 2,
-    "cols": 2,
+    "goalColor": "R",
+    "rows": 5,
+    "cols": 5,
     "tiles": [
-      [ { "color": "G", "dots": 1 }, { "type": "wall" } ],
-      [ { "color": "B", "dots": 0 }, { "type": "empty" } ]
+      [ { "color": "G", "dots": 1 }, { "color": "G", "dots": 0 }, { "color": "P", "dots": 0 } , { "color": "P", "dots": 0 }, { "color": "P", "dots": 0 }],
+      [ { "type": "empty" }, { "color": "G", "dots": 0 }, { "color": "Y", "dots": 1 }, {"type": "empty"}, { "color": "P", "dots": 0 } ],
+      [{"type": "empty"}, {"type": "empty"}, {"type": "empty"}, {"type": "empty"}, {"color": "P", "dots": 1}],
+      [{"type": "wall"}, {"color": "R", "dots": 4}, {"type": "wall"}, {"type": "empty"}, {"color": "G", "dots": 0}],
+      [{"type": "empty"}, {"type": "empty"}, {"type": "empty"}, {"type": "empty"}, {"color": "B", "dots": 1}]
     ]
   },
   {
