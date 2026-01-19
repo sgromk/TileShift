@@ -1,4 +1,4 @@
-# Puralax
+# TileShift
 
 A Java implementation of the puzzle game Puralax, featuring procedurally generated levels and a clean MVC architecture. Built with Java Swing for the GUI and includes a sophisticated level generator with solvability guarantees.
 
