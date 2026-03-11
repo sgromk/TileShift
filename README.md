@@ -2,16 +2,37 @@
 
 A Java implementation of the puzzle game Puralax, featuring procedurally generated levels and a clean MVC architecture. Built with Java Swing for the GUI and includes a sophisticated level generator with solvability guarantees.
 
-## Game Rules
+## Gameplay
 
-Puralax is a color-based puzzle game where the objective is to paint all tiles on the board to match a target color:
+TileShift is a color-based puzzle game where the objective is to paint all tiles on the board to match a target color.
 
-- **Colored tiles** can have dots indicating remaining moves
+<img src="gifs/lvl_1.gif" width="45%"> <img src="gifs/lvl_3.gif" width="45%">
+
+### Game Mechanics
+
+- **Colored tiles** have dots indicating remaining moves
 - **Click a tile** to select it, then click an adjacent tile to move
 - **Moving to empty space**: The tile relocates and consumes one dot
 - **Moving to a different color**: Triggers flood-fill painting, converting all connected tiles of that color to your tile's color
-- **Win condition**: All colored tiles match the goal color
-- **Lose condition**: No legal moves remain and the board is not solved
+
+<img src="gifs/color_propagate.gif" width="45%"> <img src="gifs/lvl_4.gif" width="45%">
+
+### Win/Loss Conditions
+
+- **Win**: All colored tiles match the goal color
+- **Lose**: No legal moves remain and the board is not solved
+
+### Game Modes
+
+**Play Level** - Select from pre-made puzzle levels
+
+**Level Creator** - Design and test custom levels
+
+<img src="gifs/level_create.gif" width="45%">
+
+**Generate Level** - Create procedural puzzles (2x2 to 7x7 grids)
+
+<img src="gifs/level_generation.gif" width="45%">
 
 ## Getting Started
 
@@ -20,7 +41,13 @@ Puralax is a color-based puzzle game where the objective is to paint all tiles o
 - Java 21 or higher
 - Maven 3.6+
 
-### Building and Running
+### Run from JAR
+
+```bash
+java -jar TileShift-1.0-SNAPSHOT.jar
+```
+
+### Build from Source
 
 ```bash
 # Compile the project
@@ -31,14 +58,10 @@ mvn exec:java
 
 # Run tests
 mvn test
+
+# Build executable JAR
+mvn package
 ```
-
-### Playing
-
-1. Launch the application to see the main menu
-2. Choose "Play Level" to select from pre-made levels
-3. Choose "Level Creator" to design custom levels
-4. Choose "Generate Level" to create procedural puzzles (2x2 to 7x7 grids)
 
 ## Architecture
 
