@@ -73,15 +73,6 @@ public class GameController {
     }
 
     /**
-     * Main method to begin the game. Initializes the GameController and calls the
-     * playGame method.
-     * @param args
-     */
-    public static void main(String[] args) {
-        new GameController();
-    }
-
-    /**
      * Called by the view when the player chooses whether to replay a failed level.
      * @param tryAgain true if player wants to retry the current level, false to exit
      */
@@ -209,5 +200,14 @@ public class GameController {
         }
         this.selectedRow = -1;
         this.selectedCol = -1;
+    }
+
+    /**
+     * Main method to begin the game. Initializes the GameController and calls the
+     * playGame method.
+     * @param args
+     */
+    public static void main(String[] args) {
+        new GameController();
     }
 }
